@@ -1,0 +1,21 @@
+control-plane/
+├── cmd/                          # 可执行程序入口
+│   ├── server/main.go            # 主服务：组装 catalog/ledger/orch/API
+│   └── node-kernel-exporter/     # 节点补充指标（与主服务分离）
+│
+├── internal/                     # 业务代码（按领域分包）
+│   ├── catalog/                  # ① 分切模板 + 资源池定义
+│   ├── ledger/                   # ② 库存与占片调度（内存账本）
+│   ├── model/                    # ③ 公共数据结构
+│   ├── api/                      # ④ HTTP 路由与契约
+│   ├── orchestration/            # ⑤ 训推 YAML + K8s 提交 + 状态同步
+│   ├── metrics/                  # ⑥ 控制面 Prometheus 指标
+│   ├── auth/                     # ⑦ JWT / 租户权限
+│   └── audit/                    # ⑧ 写操作审计日志
+│
+├── examples/                     # 可 kubectl apply 的样例与版本矩阵
+│   ├── k8s/*.yaml
+│   └── version-matrix.json
+│
+├── go.mod / go.sum
+└── cp-server                     # 编译产物（二进制，可忽略在 git 外）
