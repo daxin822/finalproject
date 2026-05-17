@@ -1,0 +1,468 @@
+openapi: 3.0.3
+info:
+  title: Ascend 虚拟化资源池控制面 API
+  version: "0.1.0"
+  description: |
+    与前端字段契约（v0）：JSON 字段名均为 snake_case；时间 RFC3339 UTC。
+    鉴权：`Authorization: Bearer <token>`（`CP_AUTH_DISABLED=1` 时跳过，等价 admin）。
+servers:
+  - url: http://localhost:8080
+paths:
+  /healthz:
+    get:
+      summary: 存活探针
+      responses:
+        "200":
+          description: ok
+  /metrics:
+    get:
+      summary: Prometheus 文本指标（控制面）
+      responses:
+        "200":
+          description: exposition format
+  /api/v1/openapi.yaml:
+    get:
+      summary: 本 OpenAPI 文档
+      responses:
+        "200":
+          description: YAML
+  /api/v1/auth/login:
+    post:
+      summary: 登录（演示用户 admin / tenant1）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: invalid credentials
+  /api/v1/auth/me:
+    get:
+      summary: 当前身份
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+  /api/v1/audit/logs:
+    get:
+      summary: 审计日志（admin）
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, maximum: 500, default: 50 }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditEntry"
+  /api/v1/observability/summary:
+    get:
+      summary: 可观测性摘要（触发 gauge 刷新）
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: JSON 提示与指标入口
+  /api/v1/catalog/flavors:
+    get:
+      summary: 切片规格列表
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SliceFlavor"
+  /api/v1/catalog/flavors/{id}:
+    get:
+      summary: 切片规格详情
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SliceFlavor"
+  /api/v1/pools:
+    get:
+      summary: 资源池列表
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pool"
+  /api/v1/inventory/nodes:
+    get:
+      summary: 节点与切片单元
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Node"
+  /api/v1/ledger/summary:
+    get:
+      summary: 账本容量摘要
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LedgerSummary"
+  /api/v1/allocations:
+    get:
+      summary: 分配列表（tenant 角色仅本租户）
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Allocation"
+    post:
+      summary: 创建分配（需 tenant 与 token 一致，admin 任意）
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAllocationRequest"
+      responses:
+        "201":
+          description: created
+        "409":
+          description: no capacity
+  /api/v1/allocations/{id}:
+    get:
+      summary: 分配详情
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Allocation"
+  /api/v1/allocations/{id}/release:
+    post:
+      summary: 释放分配
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: released
+  /api/v1/workloads:
+    get:
+      summary: 任务列表
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: tenant
+          schema: { type: string }
+        - in: query
+          name: phase
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workloads:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/WorkloadRecord"
+  /api/v1/workloads/training:
+    post:
+      summary: 提交训练任务
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainingWorkloadSpec"
+      responses:
+        "201":
+          description: created
+  /api/v1/workloads/inference:
+    post:
+      summary: 提交推理服务
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InferenceWorkloadSpec"
+      responses:
+        "201":
+          description: created
+  /api/v1/workloads/{id}:
+    get:
+      summary: 任务详情
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkloadRecord"
+    delete:
+      summary: 删除任务与集群对象
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: deleted
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: CP1-HMAC
+  schemas:
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+    LoginResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, example: Bearer }
+        expires_in: { type: integer }
+    MeResponse:
+      type: object
+      properties:
+        sub: { type: string }
+        role: { type: string, enum: [admin, tenant] }
+        tenant: { type: string }
+    AuditEntry:
+      type: object
+      properties:
+        time: { type: string, format: date-time }
+        actor: { type: string }
+        role: { type: string }
+        method: { type: string }
+        path: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+    SliceFlavor:
+      type: object
+      properties:
+        id: { type: string }
+        display_name: { type: string }
+        hardware_family: { type: string }
+        k8s_extended_resource: { type: string }
+        memory_mib: { type: integer }
+        ai_cores: { type: integer }
+    Pool:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        node_selector:
+          type: object
+          additionalProperties: { type: string }
+        supported_flavor_ids:
+          type: array
+          items: { type: string }
+    Node:
+      type: object
+      properties:
+        name: { type: string }
+        pool_id: { type: string }
+        labels:
+          type: object
+          additionalProperties: { type: string }
+    LedgerSummary:
+      type: object
+      properties:
+        pool_id: { type: string }
+        flavor_id: { type: string }
+        capacity_units: { type: integer }
+        allocated_units: { type: integer }
+        free_units: { type: integer }
+    Allocation:
+      type: object
+      properties:
+        id: { type: string }
+        tenant: { type: string }
+        pool_id: { type: string }
+        flavor_id: { type: string }
+        phase: { type: string }
+        slice_unit_id: { type: string }
+        namespace: { type: string }
+        pod_ref: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    CreateAllocationRequest:
+      type: object
+      required: [tenant, pool_id, flavor_id]
+      properties:
+        tenant: { type: string }
+        pool_id: { type: string }
+        flavor_id: { type: string }
+        namespace: { type: string }
+        pod_ref: { type: string }
+    WorkloadRecord:
+      type: object
+      properties:
+        id: { type: string }
+        tenant: { type: string }
+        namespace: { type: string }
+        name: { type: string }
+        kind: { type: string }
+        phase: { type: string }
+        flavor_id: { type: string }
+        extended_resource: { type: string }
+        message: { type: string }
+        events_summary:
+          type: array
+          items: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    TrainingWorkloadSpec:
+      type: object
+      required: [name, namespace, image, extended_resource]
+      properties:
+        tenant: { type: string }
+        allocation_id: { type: string }
+        name: { type: string }
+        namespace: { type: string }
+        image: { type: string }
+        flavor_id: { type: string }
+        extended_resource: { type: string }
+        resource_quantity: { type: string }
+        replicas: { type: integer }
+        scheduler_name: { type: string }
+        min_available: { type: integer }
+        task_name: { type: string }
+        command:
+          type: array
+          items: { type: string }
+        args:
+          type: array
+          items: { type: string }
+        node_selector:
+          type: object
+          additionalProperties: { type: string }
+        labels:
+          type: object
+          additionalProperties: { type: string }
+        annotations:
+          type: object
+          additionalProperties: { type: string }
+        distributed:
+          type: object
+          properties:
+            enabled: { type: boolean }
+            world_size: { type: integer }
+    InferenceWorkloadSpec:
+      type: object
+      required: [name, namespace, image, extended_resource]
+      properties:
+        tenant: { type: string }
+        allocation_id: { type: string }
+        name: { type: string }
+        namespace: { type: string }
+        image: { type: string }
+        flavor_id: { type: string }
+        extended_resource: { type: string }
+        resource_quantity: { type: string }
+        replicas: { type: integer }
+        container_port: { type: integer }
+        service_type: { type: string }
+        create_service: { type: boolean }
+        command:
+          type: array
+          items: { type: string }
+        args:
+          type: array
+          items: { type: string }

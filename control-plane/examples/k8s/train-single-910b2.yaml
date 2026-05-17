@@ -1,0 +1,40 @@
+# 单卡 910B2 smoke（与 ascend-training-demo 对齐；需集群已装 Volcano、device-plugin、驱动 hostPath）
+apiVersion: batch.volcano.sh/v1alpha1
+kind: Job
+metadata:
+  name: ascend-training-demo
+  namespace: default
+spec:
+  schedulerName: volcano
+  minAvailable: 1
+  tasks:
+  - name: training-worker
+    replicas: 1
+    template:
+      spec:
+        containers:
+        - name: trainer
+          image: swr.cn-south-1.myhuaweicloud.com/ascendhub/ascend-pytorch:24.0.RC1-A2-1.11.0-ubuntu20.04
+          command:
+          - /bin/bash
+          - -c
+          - |
+            echo "=== NPU资源分配成功 ==="
+            npu-smi info
+            echo "=== 测试PyTorch NPU ==="
+            python -c "import torch; import torch_npu; print(f'NPU是否可用: {torch_npu.npu.is_available()}')"
+            echo "=== 模拟训练中，保持运行60秒 ==="
+            sleep 60
+          resources:
+            limits:
+              huawei.com/Ascend910B2: "1"
+          volumeMounts:
+          - mountPath: /usr/local/Ascend/driver
+            name: driver
+            readOnly: true
+        volumes:
+        - name: driver
+          hostPath:
+            path: /usr/local/Ascend/driver
+            type: DirectoryOrCreate
+        restartPolicy: Never

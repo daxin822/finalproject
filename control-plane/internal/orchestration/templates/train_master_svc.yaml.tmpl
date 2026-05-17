@@ -1,0 +1,19 @@
+# Headless Service：分布式训练 MASTER_ADDR 解析（{name}-master.{ns}.svc.cluster.local）
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Name }}-master
+  namespace: {{ .Namespace }}
+  labels:
+    control-plane.finalproject/workload: training
+    control-plane.finalproject/workload-name: {{ quote .Name }}
+    control-plane.finalproject/role: master
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    control-plane.finalproject/workload-name: {{ quote .Name }}
+  ports:
+  - name: master
+    port: {{ .Distributed.MasterPort }}
+    targetPort: {{ .Distributed.MasterPort }}

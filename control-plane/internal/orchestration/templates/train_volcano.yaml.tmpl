@@ -1,0 +1,98 @@
+# Volcano Job：MindCluster 训推编排常用形态；单卡/多副本分布式通过 replicas + 环境变量表达。
+# 集合通信：昇腾 HCCL 依赖本机网卡 IP，示例使用 status.podIP；MASTER_ADDR 需指向可解析的 master（如 headless Service）。
+apiVersion: batch.volcano.sh/v1alpha1
+kind: Job
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  labels:
+    control-plane.finalproject/workload: training
+    {{- range $k, $v := .Labels }}
+    {{ $k }}: {{ quote $v }}
+    {{- end }}
+  annotations:
+    control-plane.finalproject/flavor-id: {{ quote .FlavorID }}
+    {{- range $k, $v := .Annotations }}
+    {{ $k }}: {{ quote $v }}
+    {{- end }}
+spec:
+  schedulerName: {{ quote .Scheduler }}
+  minAvailable: {{ .MinAvailable }}
+  tasks:
+  - name: {{ .TaskName }}
+    replicas: {{ .Replicas }}
+    template:
+      metadata:
+        labels:
+          control-plane.finalproject/workload-name: {{ quote .Name }}
+      spec:
+        {{- if .NodeSelector }}
+        nodeSelector:
+          {{- range $k, $v := .NodeSelector }}
+          {{ $k }}: {{ quote $v }}
+          {{- end }}
+        {{- end }}
+        restartPolicy: Never
+        containers:
+        - name: trainer
+          image: {{ quote .Image }}
+          {{- if .Command }}
+          command:
+          {{- range .Command }}
+          - {{ quote . }}
+          {{- end }}
+          {{- end }}
+          {{- if .Args }}
+          args:
+          {{- range .Args }}
+          - {{ quote . }}
+          {{- end }}
+          {{- end }}
+          env:
+          - name: WORLD_SIZE
+            value: {{ if .Distributed.Enabled }}{{ quote (printf "%d" .Distributed.WorldSize) }}{{ else }}{{ quote (printf "%d" .Replicas) }}{{ end }}
+          {{- if .Distributed.Enabled }}
+          - name: MASTER_ADDR
+            value: {{ quote .Distributed.MasterAddr }}
+          - name: MASTER_PORT
+            value: {{ quote (printf "%d" .Distributed.MasterPort) }}
+          - name: HCCL_CONNECT_TIMEOUT
+            value: {{ quote (printf "%d" .Distributed.HCCLTimeout) }}
+          {{- if .Distributed.DeviceBackend }}
+          - name: ASCEND_DEVICE_BACKEND
+            value: {{ quote .Distributed.DeviceBackend }}
+          {{- end }}
+          - name: HCCL_IF_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          {{- if and .Distributed.Enabled (gt .Replicas 1) }}
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          {{- else if and .Distributed.Enabled (le .Replicas 1) }}
+          - name: RANK
+            value: "0"
+          - name: LOCAL_RANK
+            value: "0"
+          {{- end }}
+          {{- range $k, $v := .Distributed.ExtraEnvs }}
+          - name: {{ $k }}
+            value: {{ quote $v }}
+          {{- end }}
+          {{- end }}
+          resources:
+            limits:
+              {{ .ExtendedRes }}: {{ quote .ResQuantity }}
+            requests:
+              {{ .ExtendedRes }}: {{ quote .ResQuantity }}
+          volumeMounts:
+          - name: ascend-driver
+            mountPath: /usr/local/Ascend/driver
+            readOnly: true
+        volumes:
+        - name: ascend-driver
+          hostPath:
+            path: /usr/local/Ascend/driver
+            type: DirectoryOrCreate

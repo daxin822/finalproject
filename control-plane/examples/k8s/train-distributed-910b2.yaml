@@ -1,0 +1,82 @@
+# 4 副本分布式训练示例：Headless master Service + HCCL 环境（需在集群替换 image/command）
+apiVersion: v1
+kind: Service
+metadata:
+  name: dist-train-master
+  namespace: default
+  labels:
+    control-plane.finalproject/workload: training
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    control-plane.finalproject/workload-name: dist-train
+  ports:
+  - name: master
+    port: 29500
+    targetPort: 29500
+---
+apiVersion: batch.volcano.sh/v1alpha1
+kind: Job
+metadata:
+  name: dist-train
+  namespace: default
+  labels:
+    control-plane.finalproject/workload-name: dist-train
+spec:
+  schedulerName: volcano
+  minAvailable: 4
+  tasks:
+  - name: training-worker
+    replicas: 4
+    template:
+      metadata:
+        labels:
+          control-plane.finalproject/workload-name: dist-train
+      spec:
+        restartPolicy: Never
+        containers:
+        - name: trainer
+          image: swr.cn-south-1.myhuaweicloud.com/ascendhub/ascend-pytorch:24.0.RC1-A2-1.11.0-ubuntu20.04
+          command:
+          - /bin/bash
+          - -c
+          - |
+            set -euo pipefail
+            export RANK="${POD_NAME##*-}"
+            export LOCAL_RANK=0
+            echo "RANK=$RANK WORLD_SIZE=$WORLD_SIZE MASTER=$MASTER_ADDR:$MASTER_PORT"
+            sleep 120
+          env:
+          - name: WORLD_SIZE
+            value: "4"
+          - name: MASTER_ADDR
+            value: dist-train-master.default.svc.cluster.local
+          - name: MASTER_PORT
+            value: "29500"
+          - name: HCCL_CONNECT_TIMEOUT
+            value: "7200"
+          - name: ASCEND_DEVICE_BACKEND
+            value: hccl
+          - name: HCCL_IF_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          resources:
+            limits:
+              huawei.com/Ascend910B2: "1"
+            requests:
+              huawei.com/Ascend910B2: "1"
+          volumeMounts:
+          - name: ascend-driver
+            mountPath: /usr/local/Ascend/driver
+            readOnly: true
+        volumes:
+        - name: ascend-driver
+          hostPath:
+            path: /usr/local/Ascend/driver
+            type: DirectoryOrCreate

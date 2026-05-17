@@ -1,0 +1,9 @@
+{
+  "description": "在目标 MindCluster 集群实测后填写版本矩阵（占位）。",
+  "kubernetes": "",
+  "volcano": "",
+  "mindcluster": "",
+  "cann": "",
+  "ascend_device_plugin": "",
+  "notes": "与 control-plane/examples/k8s 样例在同一环境验证后更新本文件。"
+}

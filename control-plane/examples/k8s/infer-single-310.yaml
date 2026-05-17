@@ -1,0 +1,51 @@
+# 单副本推理 Deployment（资源键与 catalog ascend-310-vir02 对齐：huawei.com/ascend-310-2c）
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ascend-infer-demo
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ascend-infer-demo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ascend-infer-demo
+        control-plane.finalproject/workload: inference
+    spec:
+      containers:
+      - name: infer
+        image: swr.cn-south-1.myhuaweicloud.com/ascendhub/ascend-mindspore:23.0.RC3-centos7
+        ports:
+        - containerPort: 8080
+          name: http
+        resources:
+          limits:
+            huawei.com/ascend-310-2c: "1"
+          requests:
+            huawei.com/ascend-310-2c: "1"
+        volumeMounts:
+        - name: ascend-driver
+          mountPath: /usr/local/Ascend/driver
+          readOnly: true
+      volumes:
+      - name: ascend-driver
+        hostPath:
+          path: /usr/local/Ascend/driver
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ascend-infer-demo
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: ascend-infer-demo
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080

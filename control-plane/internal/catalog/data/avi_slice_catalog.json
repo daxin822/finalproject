@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "flavors": [
+    {
+      "id": "ascend-310-vir01",
+      "display_name": "Atlas 310 vir01（软件虚拟化参考）",
+      "hardware_family": "atlas-310",
+      "avi_template_id": "vir01",
+      "provision_mode": "avi_template",
+      "virtualization_mode": "software",
+      "ai_cores": 1,
+      "memory_mib": 1024,
+      "ai_cpus": 1,
+      "k8s_extended_resource": "huawei.com/ascend-310-1c",
+      "pod_limits_example": { "huawei.com/ascend-310-1c": "1" },
+      "notes": "vir01 对应资源名以集群 device-plugin 为准；此处与 CCE 手册示例表对齐。"
+    },
+    {
+      "id": "ascend-310-vir02",
+      "display_name": "Atlas 310 vir02",
+      "hardware_family": "atlas-310",
+      "avi_template_id": "vir02",
+      "provision_mode": "avi_template",
+      "virtualization_mode": "hardware",
+      "ai_cores": 2,
+      "memory_mib": 2048,
+      "ai_cpus": 2,
+      "k8s_extended_resource": "huawei.com/ascend-310-2c",
+      "pod_limits_example": { "huawei.com/ascend-310-2c": "1" }
+    },
+    {
+      "id": "ascend-310-vir02-1cpu",
+      "display_name": "Atlas 310 vir02_1c",
+      "hardware_family": "atlas-310",
+      "avi_template_id": "vir02_1c",
+      "provision_mode": "avi_template",
+      "virtualization_mode": "hardware",
+      "ai_cores": 2,
+      "memory_mib": 2048,
+      "ai_cpus": 1,
+      "k8s_extended_resource": "huawei.com/ascend-310-2c.1cpu",
+      "pod_limits_example": { "huawei.com/ascend-310-2c.1cpu": "1" }
+    },
+    {
+      "id": "ascend-310-vir04",
+      "display_name": "Atlas 310 vir04",
+      "hardware_family": "atlas-310",
+      "avi_template_id": "vir04",
+      "provision_mode": "avi_template",
+      "virtualization_mode": "hardware",
+      "ai_cores": 4,
+      "memory_mib": 4096,
+      "ai_cpus": 4,
+      "k8s_extended_resource": "huawei.com/ascend-310-4c",
+      "pod_limits_example": { "huawei.com/ascend-310-4c": "1" }
+    },
+    {
+      "id": "ascend-310-vir04-3c-ndvpp",
+      "display_name": "Atlas 310 vir04_3c_ndvpp",
+      "hardware_family": "atlas-310",
+      "avi_template_id": "vir04_3c_ndvpp",
+      "provision_mode": "avi_template",
+      "virtualization_mode": "hardware",
+      "ai_cores": 4,
+      "memory_mib": 4096,
+      "ai_cpus": 3,
+      "k8s_extended_resource": "huawei.com/ascend-310-4c.3cpu.ndvpp",
+      "pod_limits_example": { "huawei.com/ascend-310-4c.3cpu.ndvpp": "1" }
+    },
+    {
+      "id": "ascend-310-vir04-4c-dvpp",
+      "display_name": "Atlas 310 vir04_4c_dvpp",
+      "hardware_family": "atlas-310",
+      "avi_template_id": "vir04_4c_dvpp",
+      "provision_mode": "avi_template",
+      "virtualization_mode": "hardware",
+      "ai_cores": 4,
+      "memory_mib": 4096,
+      "ai_cpus": 4,
+      "k8s_extended_resource": "huawei.com/ascend-310-4c.4cpu.dvpp",
+      "pod_limits_example": { "huawei.com/ascend-310-4c.4cpu.dvpp": "1" }
+    },
+    {
+      "id": "ascend-910b2-whole-card",
+      "display_name": "Ascend 910B2 整卡",
+      "hardware_family": "atlas-910b2",
+      "avi_template_id": "",
+      "provision_mode": "hard_split",
+      "virtualization_mode": "none",
+      "ai_cores": 0,
+      "memory_mib": 0,
+      "ai_cpus": 0,
+      "k8s_extended_resource": "huawei.com/Ascend910B2",
+      "pod_limits_example": { "huawei.com/Ascend910B2": "1" },
+      "notes": "整卡资源名来自现网训练 Job；若启用 AVI 切片，请替换为设备插件上报的 vNPU 资源键。"
+    }
+  ],
+  "pools": [
+    {
+      "id": "pool-inference-310",
+      "name": "推理池（310）",
+      "node_selector": { "pool": "inference-310" },
+      "supported_flavor_ids": [
+        "ascend-310-vir01",
+        "ascend-310-vir02",
+        "ascend-310-vir02-1cpu",
+        "ascend-310-vir04",
+        "ascend-310-vir04-3c-ndvpp",
+        "ascend-310-vir04-4c-dvpp"
+      ]
+    },
+    {
+      "id": "pool-training-910b2",
+      "name": "训练池（910B2）",
+      "node_selector": { "pool": "training-910b2" },
+      "supported_flavor_ids": ["ascend-910b2-whole-card"]
+    }
+  ]
+}
