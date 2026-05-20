@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"finalproject/control-plane/internal/auth"
+	"finalproject/control-plane/internal/catalog"
 	"finalproject/control-plane/internal/model"
 	"finalproject/control-plane/internal/orchestration"
 )
@@ -102,26 +103,47 @@ func (s *Server) handleWorkloadsSubroutes(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (s *Server) enrichTrainingFromCatalog(in *orchestration.TrainingWorkloadSpec) {
-	if in == nil {
-		return
+func applyFlavorToNPUResources(f catalog.SliceFlavor, extendedRes, memoryRes *string, memoryQty *string, req map[string]string) {
+	if *extendedRes == "" {
+		*extendedRes = f.K8sExtendedResource
 	}
-	if in.ExtendedRes == "" && in.FlavorID != "" {
-		if f, ok := s.Ledger.Catalog().FlavorByID(in.FlavorID); ok {
-			in.ExtendedRes = f.K8sExtendedResource
+	if f.K8sMemoryExtendedResource != "" && f.MemoryMiBRequest > 0 {
+		if *memoryRes == "" {
+			*memoryRes = f.K8sMemoryExtendedResource
+		}
+		if *memoryQty == "" {
+			*memoryQty = fmt.Sprintf("%d", f.MemoryMiBRequest)
+		}
+		if req != nil {
+			req[f.K8sExtendedResource] = "1"
+			req[f.K8sMemoryExtendedResource] = *memoryQty
 		}
 	}
 }
 
-func (s *Server) enrichInferenceFromCatalog(in *orchestration.InferenceWorkloadSpec) {
-	if in == nil {
+func (s *Server) enrichTrainingFromCatalog(in *orchestration.TrainingWorkloadSpec) {
+	if in == nil || in.FlavorID == "" {
 		return
 	}
-	if in.ExtendedRes == "" && in.FlavorID != "" {
-		if f, ok := s.Ledger.Catalog().FlavorByID(in.FlavorID); ok {
-			in.ExtendedRes = f.K8sExtendedResource
-		}
+	f, ok := s.Ledger.Catalog().FlavorByID(in.FlavorID)
+	if !ok {
+		return
 	}
+	applyFlavorToNPUResources(f, &in.ExtendedRes, &in.ExtendedResMemory, &in.MemoryQuantity, nil)
+}
+
+func (s *Server) enrichInferenceFromCatalog(in *orchestration.InferenceWorkloadSpec) {
+	if in == nil || in.FlavorID == "" {
+		return
+	}
+	f, ok := s.Ledger.Catalog().FlavorByID(in.FlavorID)
+	if !ok {
+		return
+	}
+	if in.ResourceRequests == nil {
+		in.ResourceRequests = map[string]string{}
+	}
+	applyFlavorToNPUResources(f, &in.ExtendedRes, &in.ExtendedResMemory, &in.MemoryQuantity, in.ResourceRequests)
 }
 
 func (s *Server) handleRenderTraining(w http.ResponseWriter, r *http.Request) {

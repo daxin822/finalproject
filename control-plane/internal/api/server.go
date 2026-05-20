@@ -213,7 +213,9 @@ func (s *Server) handleCreateAllocation(w http.ResponseWriter, r *http.Request) 
 		"allocation": a,
 		"k8s": map[string]any{
 			"extended_resource": flavor.K8sExtendedResource,
-			"limits":            flavor.PodLimitsExample,
+			"limits":            flavor.PodResourceLimits(),
+			"hami_template":     flavor.AVITemplateID,
+			"provision_mode":    flavor.ProvisionMode,
 		},
 	}
 	writeJSON(w, http.StatusCreated, resp)

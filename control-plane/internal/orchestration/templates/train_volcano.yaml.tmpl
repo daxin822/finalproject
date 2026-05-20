@@ -85,8 +85,14 @@ spec:
           resources:
             limits:
               {{ .ExtendedRes }}: {{ quote .ResQuantity }}
+              {{- if .ExtendedResMemory }}
+              {{ .ExtendedResMemory }}: {{ quote .MemoryQuantity }}
+              {{- end }}
             requests:
               {{ .ExtendedRes }}: {{ quote .ResQuantity }}
+              {{- if .ExtendedResMemory }}
+              {{ .ExtendedResMemory }}: {{ quote .MemoryQuantity }}
+              {{- end }}
           volumeMounts:
           - name: ascend-driver
             mountPath: /usr/local/Ascend/driver

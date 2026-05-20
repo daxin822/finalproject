@@ -11,9 +11,11 @@ type TrainingWorkloadSpec struct {
 	Args        []string          `json:"args,omitempty"`
 	FlavorID    string            `json:"flavor_id,omitempty"`
 	PoolLabel   string            `json:"pool_label,omitempty"`
-	ExtendedRes string            `json:"extended_resource"`
-	ResQuantity string            `json:"resource_quantity"`
-	Replicas    int               `json:"replicas"`
+	ExtendedRes       string            `json:"extended_resource"`
+	ResQuantity       string            `json:"resource_quantity"`
+	ExtendedResMemory string            `json:"extended_memory_resource,omitempty"`
+	MemoryQuantity    string            `json:"memory_quantity,omitempty"`
+	Replicas          int               `json:"replicas"`
 	Scheduler   string            `json:"scheduler_name"`
 	MinAvailable int              `json:"min_available"`
 	TaskName    string            `json:"task_name"`
@@ -46,9 +48,11 @@ type InferenceWorkloadSpec struct {
 	FlavorID         string            `json:"flavor_id,omitempty"`
 	Command          []string          `json:"command,omitempty"`
 	Args             []string          `json:"args,omitempty"`
-	ExtendedRes      string            `json:"extended_resource"`
-	ResQuantity      string            `json:"resource_quantity"`
-	Replicas         int               `json:"replicas"`
+	ExtendedRes       string            `json:"extended_resource"`
+	ResQuantity       string            `json:"resource_quantity"`
+	ExtendedResMemory string            `json:"extended_memory_resource,omitempty"`
+	MemoryQuantity    string            `json:"memory_quantity,omitempty"`
+	Replicas          int               `json:"replicas"`
 	Port             int               `json:"container_port"`
 	ServiceType      string            `json:"service_type"`
 	CreateService    bool              `json:"create_service"`

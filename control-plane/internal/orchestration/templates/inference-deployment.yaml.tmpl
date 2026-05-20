@@ -54,6 +54,9 @@ spec:
         resources:
           limits:
             {{ .ExtendedRes }}: {{ quote .ResQuantity }}
+            {{- if .ExtendedResMemory }}
+            {{ .ExtendedResMemory }}: {{ quote .MemoryQuantity }}
+            {{- end }}
           {{- if .ResourceRequests }}
           requests:
             {{- range $k, $v := .ResourceRequests }}
@@ -62,6 +65,9 @@ spec:
           {{- else }}
           requests:
             {{ .ExtendedRes }}: {{ quote .ResQuantity }}
+            {{- if .ExtendedResMemory }}
+            {{ .ExtendedResMemory }}: {{ quote .MemoryQuantity }}
+            {{- end }}
           {{- end }}
         volumeMounts:
         - name: ascend-driver

@@ -98,6 +98,24 @@ func TestRenderInferenceYAML_NoService(t *testing.T) {
 	}
 }
 
+func TestRenderInferenceYAML_HAMiMemory(t *testing.T) {
+	yml, err := RenderInferenceYAML(InferenceWorkloadSpec{
+		Name:              "hami-infer",
+		Namespace:         "default",
+		Image:             "example.com/ascend-pytorch:test",
+		ExtendedRes:       "huawei.com/Ascend910B2",
+		ExtendedResMemory: "huawei.com/Ascend910B2-memory",
+		MemoryQuantity:    "16384",
+		Replicas:          1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(yml, "huawei.com/Ascend910B2-memory: 16384") {
+		t.Fatalf("expected HAMi memory resource:\n%s", yml)
+	}
+}
+
 func TestRenderInferenceYAML_WithService(t *testing.T) {
 	yml, err := RenderInferenceYAML(InferenceWorkloadSpec{
 		Name:          "demo-infer",

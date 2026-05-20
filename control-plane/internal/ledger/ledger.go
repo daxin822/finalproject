@@ -54,17 +54,21 @@ func (l *Ledger) seedDemoInventory() {
 			},
 		},
 		{
-			Name: "node-train-01",
+			Name: "gd-sztl-2f-idc02-f04-5-8u-kunlun-g5680v2npurack-145",
 			Labels: map[string]string{
-				"pool": "training-910b2",
+				"pool":        "training-910b2",
 				"accelerator": "Ascend910B2",
+				"ascend":      "on",
 			},
 			PoolID: "pool-training-910b2",
 			Cards: []model.AcceleratorCard{
-				{ID: "card-node-train-01-0", NodeName: "node-train-01", ChipModel: "Ascend910B2", SlotIndex: 0, PhysicalNPUs: 8},
+				{ID: "card-rack-145-0", NodeName: "gd-sztl-2f-idc02-f04-5-8u-kunlun-g5680v2npurack-145", ChipModel: "Ascend910B2", SlotIndex: 0, PhysicalNPUs: 8},
 			},
 			Slices: []model.SliceUnit{
-				{ID: "slice-train-01-0", CardID: "card-node-train-01-0", FlavorID: "ascend-910b2-whole-card", Available: true},
+				{ID: "slice-rack-145-v06-a", CardID: "card-rack-145-0", FlavorID: "ascend-910b2-hami-vir06", Available: true},
+				{ID: "slice-rack-145-v06-b", CardID: "card-rack-145-0", FlavorID: "ascend-910b2-hami-vir06", Available: true},
+				{ID: "slice-rack-145-v12-a", CardID: "card-rack-145-0", FlavorID: "ascend-910b2-hami-vir12", Available: true},
+				{ID: "slice-rack-145-whole", CardID: "card-rack-145-0", FlavorID: "ascend-910b2-whole-card", Available: true},
 			},
 		},
 	}
@@ -234,9 +238,11 @@ func (l *Ledger) K8sBindingForFlavor(flavorID string) (model.K8sResourceBinding,
 	if !ok {
 		return model.K8sResourceBinding{}, ErrUnknownFlavor
 	}
-	lim := map[string]string{}
-	for k, v := range f.PodLimitsExample {
-		lim[k] = v
+	lim := f.PodResourceLimits()
+	hint := "vNPU 需先在节点创建后由插件上报；整卡与切片资源键互斥，勿在同一 Pod 混填。"
+	if f.ProvisionMode == catalog.ProvisionHAMIVNPU {
+		hint = "HAMi 虚拟化：limits 需同时包含 " + f.K8sExtendedResource + " 与 " + f.K8sMemoryExtendedResource +
+			"；模板名见 avi_template_id。见 examples/k8s/pod-hami-910b2-vnpu-smoke.yaml"
 	}
 	return model.K8sResourceBinding{
 		FlavorID:            f.ID,
@@ -244,7 +250,8 @@ func (l *Ledger) K8sBindingForFlavor(flavorID string) (model.K8sResourceBinding,
 		RecommendedLimits:   lim,
 		RecommendedRequests: lim,
 		SchedulingHints: map[string]string{
-			"device_plugin_note": "vNPU 需先在节点创建后由插件上报；整卡与切片资源键互斥，勿在同一 Pod 混填。",
+			"device_plugin_note": hint,
+			"hami_doc":           "https://github.com/Project-HAMi/HAMi/blob/master/docs/ascend910b-support.md",
 		},
 	}, nil
 }

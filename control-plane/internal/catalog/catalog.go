@@ -14,6 +14,7 @@ type ProvisionMode string
 
 const (
 	ProvisionAVITemplate ProvisionMode = "avi_template"
+	ProvisionHAMIVNPU    ProvisionMode = "hami_vnpu" // Project-HAMi 硬件虚拟化模板（910B2/310P 等）
 	ProvisionHardSplit   ProvisionMode = "hard_split"
 )
 
@@ -35,9 +36,23 @@ type SliceFlavor struct {
 	AICores             int                `json:"ai_cores"`
 	MemoryMiB           int                `json:"memory_mib"`
 	AICPUs              int                `json:"ai_cpus"`
-	K8sExtendedResource string             `json:"k8s_extended_resource"`
-	PodLimitsExample    map[string]string  `json:"pod_limits_example"`
-	Notes               string             `json:"notes,omitempty"`
+	K8sExtendedResource       string             `json:"k8s_extended_resource"`
+	K8sMemoryExtendedResource string             `json:"k8s_memory_extended_resource,omitempty"`
+	MemoryMiBRequest          int                `json:"memory_mib_request,omitempty"`
+	PodLimitsExample          map[string]string  `json:"pod_limits_example"`
+	Notes                     string             `json:"notes,omitempty"`
+}
+
+// PodResourceLimits 返回 limits/requests 示例（含 HAMi 的 *-memory 资源）。
+func (f SliceFlavor) PodResourceLimits() map[string]string {
+	out := make(map[string]string, len(f.PodLimitsExample)+1)
+	for k, v := range f.PodLimitsExample {
+		out[k] = v
+	}
+	if f.K8sMemoryExtendedResource != "" && f.MemoryMiBRequest > 0 {
+		out[f.K8sMemoryExtendedResource] = fmt.Sprintf("%d", f.MemoryMiBRequest)
+	}
+	return out
 }
 
 type Pool struct {
